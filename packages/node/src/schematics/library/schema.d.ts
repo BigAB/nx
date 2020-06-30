@@ -10,4 +10,5 @@ export interface Schema {
   linter: Linter;
   publishable?: boolean;
   testEnvironment: 'jsdom' | 'node';
+  js?: boolean;
 }

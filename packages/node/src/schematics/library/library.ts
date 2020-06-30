@@ -14,6 +14,7 @@ import {
   Tree,
   url,
 } from '@angular-devkit/schematics';
+
 import {
   formatFiles,
   getProjectConfig,
@@ -24,8 +25,10 @@ import {
   updateWorkspaceInTree,
   getNpmScope,
 } from '@nrwl/workspace';
-import { Schema } from './schema';
 import { libsDir } from '@nrwl/workspace/src/utils/ast-utils';
+import { toJS } from '@nrwl/workspace/src/utils/rules/to-js';
+
+import { Schema } from './schema';
 
 export interface NormalizedSchema extends Schema {
   name: string;
@@ -94,6 +97,7 @@ function createFiles(options: NormalizedSchema): Rule {
       options.publishable
         ? noop()
         : filter((file) => !file.endsWith('package.json')),
+      options.js ? toJS() : noop(),
     ]),
     MergeStrategy.Overwrite
   );
@@ -127,11 +131,17 @@ function addProject(options: NormalizedSchema): Rule {
           outputPath: `dist/${libsDir(host)}/${options.projectDirectory}`,
           tsConfig: `${options.projectRoot}/tsconfig.lib.json`,
           packageJson: `${options.projectRoot}/package.json`,
-          main: `${options.projectRoot}/src/index.ts`,
+          main: maybeJs(options, `${options.projectRoot}/src/index.ts`),
           assets: [`${options.projectRoot}/*.md`],
         },
       };
     }
     return json;
   });
+}
+
+function maybeJs(options: NormalizedSchema, path: string): string {
+  return options.js && (path.endsWith('.ts') || path.endsWith('.tsx'))
+    ? path.replace(/\.tsx?$/, '.js')
+    : path;
 }

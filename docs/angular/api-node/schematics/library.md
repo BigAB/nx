@@ -44,6 +44,14 @@ Type: `string`
 
 A directory where the lib is placed
 
+### js
+
+Default: `false`
+
+Type: `boolean`
+
+Generate JavaScript files rather than TypeScript files
+
 ### linter
 
 Default: `tslint`

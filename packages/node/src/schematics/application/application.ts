@@ -12,18 +12,21 @@ import {
   url,
 } from '@angular-devkit/schematics';
 import { join, normalize, Path } from '@angular-devkit/core';
-import { Schema } from './schema';
+
 import {
   updateJsonInTree,
   updateWorkspaceInTree,
   generateProjectLint,
   addLintFiles,
+  toFileName,
+  getProjectConfig,
+  offsetFromRoot,
 } from '@nrwl/workspace';
-import { toFileName } from '@nrwl/workspace';
-import { getProjectConfig } from '@nrwl/workspace';
-import { offsetFromRoot } from '@nrwl/workspace';
-import init from '../init/init';
 import { appsDir } from '@nrwl/workspace/src/utils/ast-utils';
+import { toJS } from '@nrwl/workspace/src/utils/rules/to-js';
+
+import { Schema } from './schema';
+import init from '../init/init';
 
 interface NormalizedSchema extends Schema {
   appProjectRoot: Path;
@@ -47,7 +50,7 @@ function getBuildConfig(project: any, options: NormalizedSchema) {
     builder: '@nrwl/node:build',
     options: {
       outputPath: join(normalize('dist'), options.appProjectRoot),
-      main: join(project.sourceRoot, 'main.ts'),
+      main: join(project.sourceRoot, maybeJs(options, 'main.ts')),
       tsConfig: join(options.appProjectRoot, 'tsconfig.app.json'),
       assets: [join(project.sourceRoot, 'assets')],
     },
@@ -58,8 +61,14 @@ function getBuildConfig(project: any, options: NormalizedSchema) {
         inspect: false,
         fileReplacements: [
           {
-            replace: join(project.sourceRoot, 'environments/environment.ts'),
-            with: join(project.sourceRoot, 'environments/environment.prod.ts'),
+            replace: join(
+              project.sourceRoot,
+              maybeJs(options, 'environments/environment.ts')
+            ),
+            with: join(
+              project.sourceRoot,
+              maybeJs(options, 'environments/environment.prod.ts')
+            ),
           },
         ],
       },
@@ -113,6 +122,7 @@ function addAppFiles(options: NormalizedSchema): Rule {
         offset: offsetFromRoot(options.appProjectRoot),
       }),
       move(options.appProjectRoot),
+      options.js ? toJS() : noop(),
     ])
   );
 }
@@ -191,4 +201,10 @@ function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
     appProjectRoot,
     parsedTags,
   };
+}
+
+function maybeJs(options: NormalizedSchema, path: string): string {
+  return options.js && (path.endsWith('.ts') || path.endsWith('.tsx'))
+    ? path.replace(/\.tsx?$/, '.js')
+    : path;
 }
